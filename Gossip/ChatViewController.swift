@@ -7,18 +7,40 @@
 //
 
 import UIKit
+import JSQMessagesViewController
 
-class ChatViewController: UIViewController {
+class ChatViewController: JSQMessagesViewController {
+    
+    // MARK: - Variables/Properties/Outlets
+    
+    var messages = [JSQMessage]()
+    
+    // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        self.senderId = "test 001"
+        self.senderDisplayName = "test dave hurley"
 
-        // Do any additional setup after loading the view.
     }
 
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
+    // MARK: - JSQMessagesViewController Functions
+    
+    override func didPressSendButton(button: UIButton!, withMessageText text: String!, senderId: String!, senderDisplayName: String!, date: NSDate!) {
+        
+        print("send button pressed")
+        print("\(text)")
+        print(senderId)
+        print(senderDisplayName)
+        
+        messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, text: text))
+        
+        print(messages)
+    }
+    
+    override func didPressAccessoryButton(sender: UIButton!) {
+        print("accessory button pressed")
     }
     
     // MARK: - Actions
@@ -26,11 +48,6 @@ class ChatViewController: UIViewController {
     @IBAction func logoutTapped(sender: UIBarButtonItem) {
         
         print("logged out tapped")
-        
-        // 1. create an instance of the Main Storyboard
-        // 2. instantiate LoginViewController from main storyboard
-        // 3. get app delegate
-        // 4. set LoginViewController as root view controller
         
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         let loginVC = storyboard.instantiateViewControllerWithIdentifier("loginVC") as! LoginViewController
