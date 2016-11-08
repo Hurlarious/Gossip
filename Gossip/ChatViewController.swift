@@ -35,6 +35,7 @@ class ChatViewController: JSQMessagesViewController {
         print(senderDisplayName)
         
         messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, text: text))
+        collectionView.reloadData()
         
         print(messages)
     }
@@ -42,6 +43,36 @@ class ChatViewController: JSQMessagesViewController {
     override func didPressAccessoryButton(sender: UIButton!) {
         print("accessory button pressed")
     }
+    
+    override func collectionView(collectionView: JSQMessagesCollectionView!, messageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageData! {
+        
+        return messages[indexPath.item]
+    }
+    
+    override func collectionView(collectionView: JSQMessagesCollectionView!, messageBubbleImageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageBubbleImageDataSource! {
+        
+        let bubbleFactory = JSQMessagesBubbleImageFactory()
+        return bubbleFactory.outgoingMessagesBubbleImageWithColor(.blueColor())
+    }
+    
+    override func collectionView(collectionView: JSQMessagesCollectionView!, avatarImageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageAvatarImageDataSource! {
+        
+        return nil
+    }
+    
+    
+    override func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        print("number of items in section: \(messages.count)")
+        
+        return messages.count
+    }
+    
+    override func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
+        
+        let cell = super.collectionView(collectionView, cellForItemAtIndexPath: indexPath) as! JSQMessagesCollectionViewCell
+        return cell
+    }
+    
     
     // MARK: - Actions
     
