@@ -42,6 +42,32 @@ class ChatViewController: JSQMessagesViewController {
     
     override func didPressAccessoryButton(sender: UIButton!) {
         print("accessory button pressed")
+        
+        let sheet = UIAlertController(title: "Media Messages", message: "Please select your media", preferredStyle: UIAlertControllerStyle.ActionSheet)
+        
+        let cancel = UIAlertAction(title: "Cancel", style: UIAlertActionStyle.Cancel) { (alert: UIAlertAction) in
+            
+        }
+        
+        let photoLibrary = UIAlertAction(title: "Photo Library", style: UIAlertActionStyle.Default) { (alert: UIAlertAction) in
+            
+            self.getMediaFrom(typeImage)
+        }
+        
+        let videoLibrary = UIAlertAction(title: "Video Library", style: UIAlertActionStyle.Default) { (alert: UIAlertAction) in
+            
+            self.getMediaFrom(typeVideo)
+        }
+
+        sheet.addAction(photoLibrary)
+        sheet.addAction(videoLibrary)
+        sheet.addAction(cancel)
+        self.presentViewController(sheet, animated: true, completion: nil)
+        
+//        let imagePicker = UIImagePickerController()
+//        self.presentViewController(imagePicker, animated: true, completion: nil)
+//        imagePicker.delegate = self
+        
     }
     
     override func collectionView(collectionView: JSQMessagesCollectionView!, messageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageData! {
@@ -61,6 +87,9 @@ class ChatViewController: JSQMessagesViewController {
     }
     
     
+    // MARK: - Collection View Data Source/Delegate Functions
+    
+    
     override func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         print("number of items in section: \(messages.count)")
         
@@ -73,6 +102,14 @@ class ChatViewController: JSQMessagesViewController {
         return cell
     }
     
+    // MARK: - Functions
+    
+    func getMediaFrom() {
+        
+        let mediaPicker = UIImagePickerController()
+        mediaPicker.delegate = self
+        self.presentViewController(mediaPicker, animated: true, completion: nil)
+    }
     
     // MARK: - Actions
     
@@ -87,14 +124,25 @@ class ChatViewController: JSQMessagesViewController {
         
     }
 
-    /*
-    // MARK: - Navigation
 
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
 
 }
+
+extension ChatViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    
+    func imagePickerController(picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : AnyObject]) {
+        print("finished picking")
+        print(info)
+        
+        let selectedPhoto = info[UIImagePickerControllerOriginalImage] as? UIImage
+        let convertedPhoto = JSQPhotoMediaItem(image: selectedPhoto!)
+        messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, media: convertedPhoto))
+        
+        self.dismissViewControllerAnimated(true, completion: nil)
+        collectionView.reloadData()
+    }
+}
+
+
+
+
