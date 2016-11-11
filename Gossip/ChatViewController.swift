@@ -10,36 +10,49 @@ import UIKit
 import JSQMessagesViewController
 import MobileCoreServices
 import AVKit
+import FirebaseDatabase
 
 class ChatViewController: JSQMessagesViewController {
     
     // MARK: - Variables/Properties/Outlets
     
     var messages = [JSQMessage]()
+    var messageRef = FIRDatabase.database().reference().child("messages")
     
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.senderId = "test 001"
-        self.senderDisplayName = "test dave hurley"
+        self.senderId = "1"
+        self.senderDisplayName = "dave hurley"
+        
+
+//        messageRef.childByAutoId().setValue("first test message")
+//        messageRef.childByAutoId().setValue("second test message")
+        
+//        messageRef.observeEventType(FIRDataEventType.ChildAdded) { (snapshot: FIRDataSnapshot) in
+//
+//            if let dict = snapshot.value as? String {
+//                print(dict)
+//            }
+//        }
+        
+        observeMessages()
 
     }
 
     // MARK: - JSQMessagesViewController Functions
     
     override func didPressSendButton(button: UIButton!, withMessageText text: String!, senderId: String!, senderDisplayName: String!, date: NSDate!) {
+//        
+//        messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, text: text))
+//        collectionView.reloadData()
+//        print(messages)
         
-        print("send button pressed")
-        print("\(text)")
-        print(senderId)
-        print(senderDisplayName)
-        
-        messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, text: text))
-        collectionView.reloadData()
-        
-        print(messages)
+        let newMessage = messageRef.childByAutoId()
+        let messageData = ["text": text, "senderId": senderId, "displayName": senderDisplayName, "mediaType": "TEXT"]
+        newMessage.setValue(messageData)
     }
     
     override func didPressAccessoryButton(sender: UIButton!) {
@@ -114,6 +127,22 @@ class ChatViewController: JSQMessagesViewController {
         mediaPicker.delegate = self
         mediaPicker.mediaTypes = [type as String]
         self.presentViewController(mediaPicker, animated: true, completion: nil)
+    }
+    
+    func observeMessages() {
+        
+        messageRef.observeEventType(.ChildAdded, withBlock: { snapshot in
+            
+            if let dict = snapshot.value as? [String: AnyObject] {
+                let text = dict["text"] as! String
+                let senderId = dict["senderId"] as! String
+                let displayName = dict["displayName"] as! String
+                let mediaType = dict["mediaType"] as! String
+                self.messages.append(JSQMessage(senderId: senderId, displayName: displayName, text: text))
+                self.collectionView.reloadData()
+            }
+            
+        })
     }
     
     

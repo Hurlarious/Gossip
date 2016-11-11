@@ -9,6 +9,7 @@ target 'Gossip' do
   pod 'Firebase/Auth'
   pod 'Google/SignIn'
   pod 'JSQMessagesViewController'
+  pod 'Firebase/Database'
 
   # Pods for Gossip
 
