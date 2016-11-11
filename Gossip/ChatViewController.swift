@@ -9,6 +9,7 @@
 import UIKit
 import JSQMessagesViewController
 import MobileCoreServices
+import AVKit
 
 class ChatViewController: JSQMessagesViewController {
     
@@ -64,10 +65,7 @@ class ChatViewController: JSQMessagesViewController {
         sheet.addAction(videoLibrary)
         sheet.addAction(cancel)
         self.presentViewController(sheet, animated: true, completion: nil)
-        
-//        let imagePicker = UIImagePickerController()
-//        self.presentViewController(imagePicker, animated: true, completion: nil)
-//        imagePicker.delegate = self
+    
         
     }
     
@@ -85,6 +83,25 @@ class ChatViewController: JSQMessagesViewController {
     override func collectionView(collectionView: JSQMessagesCollectionView!, avatarImageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageAvatarImageDataSource! {
         
         return nil
+    }
+    
+    override func collectionView(collectionView: JSQMessagesCollectionView!, didTapMessageBubbleAtIndexPath indexPath: NSIndexPath!) {
+        
+        print("didTapMessageBubbleAtIndexPath: \(indexPath.item)")
+        
+        let message = messages[indexPath.item]
+        
+        if message.isMediaMessage {
+            
+            if let mediaItem = message.media as? JSQVideoMediaItem {
+                
+                let player = AVPlayer(URL: mediaItem.fileURL)
+                let playerViewController = AVPlayerViewController()
+                playerViewController.player = player
+                self.presentViewController(playerViewController, animated: true, completion: nil)
+            }
+            
+        }
     }
     
     // MARK: - Functions
