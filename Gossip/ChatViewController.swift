@@ -8,6 +8,7 @@
 
 import UIKit
 import JSQMessagesViewController
+import MobileCoreServices
 
 class ChatViewController: JSQMessagesViewController {
     
@@ -51,12 +52,12 @@ class ChatViewController: JSQMessagesViewController {
         
         let photoLibrary = UIAlertAction(title: "Photo Library", style: UIAlertActionStyle.Default) { (alert: UIAlertAction) in
             
-            self.getMediaFrom(typeImage)
+            self.getMediaFrom(kUTTypeImage)
         }
         
         let videoLibrary = UIAlertAction(title: "Video Library", style: UIAlertActionStyle.Default) { (alert: UIAlertAction) in
             
-            self.getMediaFrom(typeVideo)
+            self.getMediaFrom(kUTTypeMovie)
         }
 
         sheet.addAction(photoLibrary)
@@ -86,6 +87,19 @@ class ChatViewController: JSQMessagesViewController {
         return nil
     }
     
+    // MARK: - Functions
+    
+    func getMediaFrom(type: CFString) {
+        
+        print(type)
+        
+        let mediaPicker = UIImagePickerController()
+        mediaPicker.delegate = self
+        mediaPicker.mediaTypes = [type as String]
+        self.presentViewController(mediaPicker, animated: true, completion: nil)
+    }
+    
+    
     
     // MARK: - Collection View Data Source/Delegate Functions
     
@@ -102,15 +116,7 @@ class ChatViewController: JSQMessagesViewController {
         return cell
     }
     
-    // MARK: - Functions
-    
-    func getMediaFrom() {
-        
-        let mediaPicker = UIImagePickerController()
-        mediaPicker.delegate = self
-        self.presentViewController(mediaPicker, animated: true, completion: nil)
-    }
-    
+
     // MARK: - Actions
     
     @IBAction func logoutTapped(sender: UIBarButtonItem) {
@@ -134,9 +140,18 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
         print("finished picking")
         print(info)
         
-        let selectedPhoto = info[UIImagePickerControllerOriginalImage] as? UIImage
-        let convertedPhoto = JSQPhotoMediaItem(image: selectedPhoto!)
-        messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, media: convertedPhoto))
+        if let selectedPhoto = info[UIImagePickerControllerOriginalImage] as? UIImage {
+            
+            let convertedPhoto = JSQPhotoMediaItem(image: selectedPhoto)
+            messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, media: convertedPhoto))
+        }
+        
+        else if let selectedMovie = info[UIImagePickerControllerMediaURL] as? NSURL {
+            
+            let convertedMovie = JSQVideoMediaItem(fileURL: selectedMovie, isReadyToPlay: true)
+            messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, media: convertedMovie))
+        }
+
         
         self.dismissViewControllerAnimated(true, completion: nil)
         collectionView.reloadData()
