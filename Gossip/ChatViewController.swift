@@ -76,10 +76,10 @@ class ChatViewController: JSQMessagesViewController {
             self.getMediaFrom(kUTTypeMovie)
         }
 
-        sheet.addAction(photoLibrary)
-        sheet.addAction(videoLibrary)
-        sheet.addAction(cancel)
-        self.presentViewController(sheet, animated: true, completion: nil)
+//        sheet.addAction(photoLibrary)
+//        sheet.addAction(videoLibrary)
+//        sheet.addAction(cancel)
+//        self.presentViewController(sheet, animated: true, completion: nil)
     
         
     }
