@@ -29,28 +29,13 @@ class ChatViewController: JSQMessagesViewController {
         self.senderId = "1"
         self.senderDisplayName = "dave hurley"
         
-
-//        messageRef.childByAutoId().setValue("first test message")
-//        messageRef.childByAutoId().setValue("second test message")
-        
-//        messageRef.observeEventType(FIRDataEventType.ChildAdded) { (snapshot: FIRDataSnapshot) in
-//
-//            if let dict = snapshot.value as? String {
-//                print(dict)
-//            }
-//        }
-        
-        // observeMessages()
+        observeMessages()
 
     }
 
     // MARK: - JSQMessagesViewController Functions
     
     override func didPressSendButton(button: UIButton!, withMessageText text: String!, senderId: String!, senderDisplayName: String!, date: NSDate!) {
-//        
-//        messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, text: text))
-//        collectionView.reloadData()
-//        print(messages)
         
         let newMessage = messageRef.childByAutoId()
         let messageData = ["text": text, "senderId": senderId, "displayName": senderDisplayName, "mediaType": "TEXT"]
@@ -76,10 +61,10 @@ class ChatViewController: JSQMessagesViewController {
             self.getMediaFrom(kUTTypeMovie)
         }
 
-//        sheet.addAction(photoLibrary)
-//        sheet.addAction(videoLibrary)
-//        sheet.addAction(cancel)
-//        self.presentViewController(sheet, animated: true, completion: nil)
+        sheet.addAction(photoLibrary)
+        sheet.addAction(videoLibrary)
+        sheet.addAction(cancel)
+        self.presentViewController(sheet, animated: true, completion: nil)
     
         
     }
@@ -136,14 +121,41 @@ class ChatViewController: JSQMessagesViewController {
         messageRef.observeEventType(.ChildAdded, withBlock: { snapshot in
             
             if let dict = snapshot.value as? [String: AnyObject] {
-                let text = dict["text"] as! String
+                
                 let senderId = dict["senderId"] as! String
                 let displayName = dict["displayName"] as! String
                 let mediaType = dict["mediaType"] as! String
-                self.messages.append(JSQMessage(senderId: senderId, displayName: displayName, text: text))
+                
+                switch mediaType {
+                    
+                case "TEXT":
+                    
+                    let text = dict["text"] as! String
+                    self.messages.append(JSQMessage(senderId: senderId, displayName: displayName, text: text))
+                    
+                case "PHOTO":
+                    
+                    let fileUrl = dict ["fileUrl"] as! String
+                    let url = NSURL(string: fileUrl)
+                    let data = NSData(contentsOfURL: url!)
+                    let convertedPhoto = UIImage(data: data!)
+                    let photo = JSQPhotoMediaItem(image: convertedPhoto)
+                    self.messages.append(JSQMessage(senderId: senderId, displayName: displayName, media: photo))
+                    
+                case "VIDEO":
+                    
+                    let fileUrl = dict ["fileUrl"] as! String
+                    let video = NSURL(string: fileUrl)
+                    let convertedVideo = JSQVideoMediaItem(fileURL: video, isReadyToPlay: true)
+                    self.messages.append(JSQMessage(senderId: senderId, displayName: displayName, media: convertedVideo))
+                    
+                default:
+                    print("unknown data type")
+                    
+                }
+                
                 self.collectionView.reloadData()
             }
-            
         })
     }
     
