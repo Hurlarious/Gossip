@@ -224,7 +224,14 @@ class ChatViewController: JSQMessagesViewController {
     
     @IBAction func logoutTapped(sender: UIBarButtonItem) {
         
-        print("logged out tapped")
+        do {
+            try FIRAuth.auth()?.signOut()
+        } catch let error {
+            print (error)
+        }
+        
+        
+        print(FIRAuth.auth()?.currentUser)
         
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         let loginVC = storyboard.instantiateViewControllerWithIdentifier("loginVC") as! LoginViewController
