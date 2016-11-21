@@ -26,7 +26,8 @@ class ChatViewController: JSQMessagesViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.senderId = "1"
+        let currentUser = FIRAuth.auth()?.currentUser
+        self.senderId = currentUser!.uid
         self.senderDisplayName = "dave hurley"
         
         observeMessages()
@@ -40,6 +41,7 @@ class ChatViewController: JSQMessagesViewController {
         let newMessage = messageRef.childByAutoId()
         let messageData = ["text": text, "senderId": senderId, "displayName": senderDisplayName, "mediaType": "TEXT"]
         newMessage.setValue(messageData)
+        self.finishSendingMessage()
     }
     
     override func didPressAccessoryButton(sender: UIButton!) {
@@ -76,8 +78,15 @@ class ChatViewController: JSQMessagesViewController {
     
     override func collectionView(collectionView: JSQMessagesCollectionView!, messageBubbleImageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageBubbleImageDataSource! {
         
+        let message = messages[indexPath.item]
         let bubbleFactory = JSQMessagesBubbleImageFactory()
-        return bubbleFactory.outgoingMessagesBubbleImageWithColor(.blueColor())
+
+        if message.senderId == self.senderId {
+            return bubbleFactory.outgoingMessagesBubbleImageWithColor(.blueColor())
+            
+        } else {
+            return bubbleFactory.incomingMessagesBubbleImageWithColor(.lightGrayColor())
+        }
     }
     
     override func collectionView(collectionView: JSQMessagesCollectionView!, avatarImageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageAvatarImageDataSource! {
@@ -142,6 +151,12 @@ class ChatViewController: JSQMessagesViewController {
                     let photo = JSQPhotoMediaItem(image: convertedPhoto)
                     self.messages.append(JSQMessage(senderId: senderId, displayName: displayName, media: photo))
                     
+                    if self.senderId == senderId {
+                        photo.appliesMediaViewMaskAsOutgoing = true
+                    } else {
+                        photo.appliesMediaViewMaskAsOutgoing = false
+                    }
+                    
                 case "VIDEO":
                     
                     let fileUrl = dict ["fileUrl"] as! String
@@ -149,9 +164,14 @@ class ChatViewController: JSQMessagesViewController {
                     let convertedVideo = JSQVideoMediaItem(fileURL: video, isReadyToPlay: true)
                     self.messages.append(JSQMessage(senderId: senderId, displayName: displayName, media: convertedVideo))
                     
+                    if self.senderId == senderId {
+                        convertedVideo.appliesMediaViewMaskAsOutgoing = true
+                    } else {
+                        convertedVideo.appliesMediaViewMaskAsOutgoing = false
+                    }
+                    
                 default:
                     print("unknown data type")
-                    
                 }
                 
                 self.collectionView.reloadData()
@@ -230,9 +250,6 @@ class ChatViewController: JSQMessagesViewController {
             print (error)
         }
         
-        
-        print(FIRAuth.auth()?.currentUser)
-        
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         let loginVC = storyboard.instantiateViewControllerWithIdentifier("loginVC") as! LoginViewController
         let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
@@ -251,20 +268,13 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
         print(info)
         
         if let selectedPhoto = info[UIImagePickerControllerOriginalImage] as? UIImage {
-            
-            let convertedPhoto = JSQPhotoMediaItem(image: selectedPhoto)
-            messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, media: convertedPhoto))
             sendMedia(selectedPhoto, video: nil)
         }
         
         else if let selectedVideo = info[UIImagePickerControllerMediaURL] as? NSURL {
-            
-            let convertedVideo = JSQVideoMediaItem(fileURL: selectedVideo, isReadyToPlay: true)
-            messages.append(JSQMessage(senderId: senderId, displayName: senderDisplayName, media: convertedVideo))
             sendMedia(nil, video: selectedVideo)
         }
 
-        
         self.dismissViewControllerAnimated(true, completion: nil)
         collectionView.reloadData()
     }
