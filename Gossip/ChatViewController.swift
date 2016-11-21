@@ -20,15 +20,23 @@ class ChatViewController: JSQMessagesViewController {
     
     var messages = [JSQMessage]()
     var messageRef = FIRDatabase.database().reference().child("messages")
+    var avatarDict = [String: JSQMessagesAvatarImage]()
     
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let currentUser = FIRAuth.auth()?.currentUser
-        self.senderId = currentUser!.uid
-        self.senderDisplayName = "dave hurley"
+        if let currentUser = FIRAuth.auth()?.currentUser {
+            
+            self.senderId = currentUser.uid
+            
+            if currentUser.anonymous == true {
+                self.senderDisplayName = "Anon"
+            } else {
+                self.senderDisplayName = "\(currentUser.displayName!)"
+            }
+        }
         
         observeMessages()
 
@@ -39,7 +47,7 @@ class ChatViewController: JSQMessagesViewController {
     override func didPressSendButton(button: UIButton!, withMessageText text: String!, senderId: String!, senderDisplayName: String!, date: NSDate!) {
         
         let newMessage = messageRef.childByAutoId()
-        let messageData = ["text": text, "senderId": senderId, "displayName": senderDisplayName, "mediaType": "TEXT"]
+        let messageData = ["text": text, "senderId": senderId, "senderName": senderDisplayName, "mediaType": "TEXT"]
         newMessage.setValue(messageData)
         self.finishSendingMessage()
     }
@@ -91,7 +99,8 @@ class ChatViewController: JSQMessagesViewController {
     
     override func collectionView(collectionView: JSQMessagesCollectionView!, avatarImageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageAvatarImageDataSource! {
         
-        return nil
+        let message = messages[indexPath.item]
+        return avatarDict[message.senderId]
     }
     
     override func collectionView(collectionView: JSQMessagesCollectionView!, didTapMessageBubbleAtIndexPath indexPath: NSIndexPath!) {
@@ -125,6 +134,35 @@ class ChatViewController: JSQMessagesViewController {
         self.presentViewController(mediaPicker, animated: true, completion: nil)
     }
     
+    func observeUsers(id: String) {
+        
+        FIRDatabase.database().reference().child("users").child(id).observeEventType(.Value, withBlock: { snapshot in
+            
+            if let dict = snapshot.value as? [String: AnyObject] {
+                let avatarUrl = dict["profileUrl"] as! String
+                self.setupAvatar(avatarUrl, messageId: id)
+            }
+        })
+    }
+    
+    func setupAvatar(url: String, messageId: String) {
+        
+        if url != "" {
+            
+            let fileUrl = NSURL(string: url)
+            let data = NSData(contentsOfURL: fileUrl!)
+            let image = UIImage(data: data!)
+            let userImg = JSQMessagesAvatarImageFactory.avatarImageWithImage(image, diameter: 30)
+            avatarDict[messageId] = userImg
+            
+        } else {
+            
+            avatarDict[messageId] = JSQMessagesAvatarImageFactory.avatarImageWithImage(UIImage(named: "profileImage"), diameter: 30)
+        }
+        
+        collectionView.reloadData()
+    }
+    
     func observeMessages() {
         
         messageRef.observeEventType(.ChildAdded, withBlock: { snapshot in
@@ -132,15 +170,17 @@ class ChatViewController: JSQMessagesViewController {
             if let dict = snapshot.value as? [String: AnyObject] {
                 
                 let senderId = dict["senderId"] as! String
-                let displayName = dict["displayName"] as! String
+                let senderName = dict["senderName"] as! String
                 let mediaType = dict["mediaType"] as! String
+                
+                self.observeUsers(senderId)
                 
                 switch mediaType {
                     
                 case "TEXT":
                     
                     let text = dict["text"] as! String
-                    self.messages.append(JSQMessage(senderId: senderId, displayName: displayName, text: text))
+                    self.messages.append(JSQMessage(senderId: senderId, displayName: senderName, text: text))
                     
                 case "PHOTO":
                     
@@ -149,7 +189,7 @@ class ChatViewController: JSQMessagesViewController {
                     let data = NSData(contentsOfURL: url!)
                     let convertedPhoto = UIImage(data: data!)
                     let photo = JSQPhotoMediaItem(image: convertedPhoto)
-                    self.messages.append(JSQMessage(senderId: senderId, displayName: displayName, media: photo))
+                    self.messages.append(JSQMessage(senderId: senderId, displayName: senderName, media: photo))
                     
                     if self.senderId == senderId {
                         photo.appliesMediaViewMaskAsOutgoing = true
@@ -162,7 +202,7 @@ class ChatViewController: JSQMessagesViewController {
                     let fileUrl = dict ["fileUrl"] as! String
                     let video = NSURL(string: fileUrl)
                     let convertedVideo = JSQVideoMediaItem(fileURL: video, isReadyToPlay: true)
-                    self.messages.append(JSQMessage(senderId: senderId, displayName: displayName, media: convertedVideo))
+                    self.messages.append(JSQMessage(senderId: senderId, displayName: senderName, media: convertedVideo))
                     
                     if self.senderId == senderId {
                         convertedVideo.appliesMediaViewMaskAsOutgoing = true
@@ -198,7 +238,7 @@ class ChatViewController: JSQMessagesViewController {
                 
                 let fileUrl = metadata!.downloadURLs![0].absoluteString
                 let newMessage = self.messageRef.childByAutoId()
-                let messageData = ["fileUrl": fileUrl, "senderId": self.senderId, "displayName": self.senderDisplayName, "mediaType": "PHOTO"]
+                let messageData = ["fileUrl": fileUrl, "senderId": self.senderId, "senderName": self.senderDisplayName, "mediaType": "PHOTO"]
                 newMessage.setValue(messageData)
             }
             
@@ -217,7 +257,7 @@ class ChatViewController: JSQMessagesViewController {
                 
                 let fileUrl = metadata!.downloadURLs![0].absoluteString
                 let newMessage = self.messageRef.childByAutoId()
-                let messageData = ["fileUrl": fileUrl, "senderId": self.senderId, "displayName": self.senderDisplayName, "mediaType": "VIDEO"]
+                let messageData = ["fileUrl": fileUrl, "senderId": self.senderId, "senderName": self.senderDisplayName, "mediaType": "VIDEO"]
                 newMessage.setValue(messageData)
             }
         }

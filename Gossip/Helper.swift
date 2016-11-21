@@ -10,6 +10,7 @@ import Foundation
 import FirebaseAuth
 import UIKit
 import GoogleSignIn
+import FirebaseDatabase
 
 class Helper {
     
@@ -24,6 +25,10 @@ class Helper {
             if error == nil {
                 
                 print("UserID: \(anonymousUser!.uid)")
+                
+                let newUser = FIRDatabase.database().reference().child("users").child(anonymousUser!.uid)
+                newUser.setValue(["displayName" : "Anon" , "id" : "\(anonymousUser!.uid)" , "profileUrl" : ""])
+                
                 self.switchToNavigationViewController()
                 
             } else {
@@ -48,6 +53,10 @@ class Helper {
                 
                 print(user?.email)
                 print(user?.displayName)
+                print(user?.photoURL)
+                
+                let newUser = FIRDatabase.database().reference().child("users").child(user!.uid)
+                newUser.setValue(["displayName" : "\(user!.displayName!)" , "id" : "\(user!.uid)" , "profileUrl" : "\(user!.photoURL!)"])
                 
                 self.switchToNavigationViewController()
             }
