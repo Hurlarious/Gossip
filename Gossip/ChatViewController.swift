@@ -21,6 +21,7 @@ class ChatViewController: JSQMessagesViewController {
     var messages = [JSQMessage]()
     var messageRef = FIRDatabase.database().reference().child("messages")
     var avatarDict = [String: JSQMessagesAvatarImage]()
+    let photoCache = NSCache()
     
     // MARK: - Lifecycle
 
@@ -134,34 +135,6 @@ class ChatViewController: JSQMessagesViewController {
         self.presentViewController(mediaPicker, animated: true, completion: nil)
     }
     
-    func observeUsers(id: String) {
-        
-        FIRDatabase.database().reference().child("users").child(id).observeEventType(.Value, withBlock: { snapshot in
-            
-            if let dict = snapshot.value as? [String: AnyObject] {
-                let avatarUrl = dict["profileUrl"] as! String
-                self.setupAvatar(avatarUrl, messageId: id)
-            }
-        })
-    }
-    
-    func setupAvatar(url: String, messageId: String) {
-        
-        if url != "" {
-            
-            let fileUrl = NSURL(string: url)
-            let data = NSData(contentsOfURL: fileUrl!)
-            let image = UIImage(data: data!)
-            let userImg = JSQMessagesAvatarImageFactory.avatarImageWithImage(image, diameter: 30)
-            avatarDict[messageId] = userImg
-            
-        } else {
-            
-            avatarDict[messageId] = JSQMessagesAvatarImageFactory.avatarImageWithImage(UIImage(named: "profileImage"), diameter: 30)
-        }
-        
-        collectionView.reloadData()
-    }
     
     func observeMessages() {
         
@@ -176,19 +149,39 @@ class ChatViewController: JSQMessagesViewController {
                 self.observeUsers(senderId)
                 
                 switch mediaType {
-                    
+        
                 case "TEXT":
-                    
+        
                     let text = dict["text"] as! String
                     self.messages.append(JSQMessage(senderId: senderId, displayName: senderName, text: text))
                     
                 case "PHOTO":
                     
+                    var photo = JSQPhotoMediaItem(image: nil)
                     let fileUrl = dict ["fileUrl"] as! String
-                    let url = NSURL(string: fileUrl)
-                    let data = NSData(contentsOfURL: url!)
-                    let convertedPhoto = UIImage(data: data!)
-                    let photo = JSQPhotoMediaItem(image: convertedPhoto)
+                    
+                    if let cachedPhoto = self.photoCache.objectForKey(fileUrl) as? JSQPhotoMediaItem {
+                        
+                        photo = cachedPhoto
+                        self.collectionView.reloadData()
+                        
+                    } else {
+                        
+                        dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), {
+                            
+                            let url = NSURL(string: fileUrl)
+                            let data = NSData(contentsOfURL: url!)
+                            let convertedPhoto = UIImage(data: data!)
+                            photo.image = convertedPhoto
+                            
+                            dispatch_async(dispatch_get_main_queue(), {
+                                
+                                self.collectionView.reloadData()
+                                self.photoCache.setObject(photo, forKey: fileUrl)
+                            })
+                        })
+                    }
+                    
                     self.messages.append(JSQMessage(senderId: senderId, displayName: senderName, media: photo))
                     
                     if self.senderId == senderId {
@@ -218,6 +211,41 @@ class ChatViewController: JSQMessagesViewController {
             }
         })
     }
+    
+    
+    
+    func observeUsers(id: String) {
+        
+        FIRDatabase.database().reference().child("users").child(id).observeEventType(.Value, withBlock: { snapshot in
+            
+            if let dict = snapshot.value as? [String: AnyObject] {
+                let avatarUrl = dict["profileUrl"] as! String
+                self.setupAvatar(avatarUrl, messageId: id)
+            }
+        })
+    }
+    
+    
+    
+    func setupAvatar(url: String, messageId: String) {
+        
+        if url != "" {
+            
+            let fileUrl = NSURL(string: url)
+            let data = NSData(contentsOfURL: fileUrl!)
+            let image = UIImage(data: data!)
+            let userImg = JSQMessagesAvatarImageFactory.avatarImageWithImage(image, diameter: 30)
+            avatarDict[messageId] = userImg
+            
+        } else {
+            
+            avatarDict[messageId] = JSQMessagesAvatarImageFactory.avatarImageWithImage(UIImage(named: "profileImage"), diameter: 30)
+        }
+        
+        collectionView.reloadData()
+    }
+    
+    
     
     func sendMedia(photo: UIImage?, video: NSURL?) {
         print(photo)
@@ -300,6 +328,8 @@ class ChatViewController: JSQMessagesViewController {
 
 
 }
+
+// MARK: - Extension
 
 extension ChatViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
