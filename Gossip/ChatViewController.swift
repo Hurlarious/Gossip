@@ -21,7 +21,7 @@ class ChatViewController: JSQMessagesViewController {
     var messages = [JSQMessage]()
     var messageRef = FIRDatabase.database().reference().child("messages")
     var avatarDict = [String: JSQMessagesAvatarImage]()
-    let photoCache = NSCache()
+    let photoCache = NSCache<AnyObject, AnyObject>()
     
     // MARK: - Lifecycle
 
@@ -32,7 +32,7 @@ class ChatViewController: JSQMessagesViewController {
             
             self.senderId = currentUser.uid
             
-            if currentUser.anonymous == true {
+            if currentUser.isAnonymous == true {
                 self.senderDisplayName = "Anon"
             } else {
                 self.senderDisplayName = "\(currentUser.displayName!)"
@@ -45,7 +45,7 @@ class ChatViewController: JSQMessagesViewController {
 
     // MARK: - JSQMessagesViewController Functions
     
-    override func didPressSendButton(button: UIButton!, withMessageText text: String!, senderId: String!, senderDisplayName: String!, date: NSDate!) {
+    override func didPressSend(_ button: UIButton!, withMessageText text: String!, senderId: String!, senderDisplayName: String!, date: Date!) {
         
         let newMessage = messageRef.childByAutoId()
         let messageData = ["text": text, "senderId": senderId, "senderName": senderDisplayName, "mediaType": "TEXT"]
@@ -53,21 +53,21 @@ class ChatViewController: JSQMessagesViewController {
         self.finishSendingMessage()
     }
     
-    override func didPressAccessoryButton(sender: UIButton!) {
+    override func didPressAccessoryButton(_ sender: UIButton!) {
         print("accessory button pressed")
         
-        let sheet = UIAlertController(title: "Media Messages", message: "Please select your media", preferredStyle: UIAlertControllerStyle.ActionSheet)
+        let sheet = UIAlertController(title: "Media Messages", message: "Please select your media", preferredStyle: UIAlertControllerStyle.actionSheet)
         
-        let cancel = UIAlertAction(title: "Cancel", style: UIAlertActionStyle.Cancel) { (alert: UIAlertAction) in
+        let cancel = UIAlertAction(title: "Cancel", style: UIAlertActionStyle.cancel) { (alert: UIAlertAction) in
             
         }
         
-        let photoLibrary = UIAlertAction(title: "Photo Library", style: UIAlertActionStyle.Default) { (alert: UIAlertAction) in
+        let photoLibrary = UIAlertAction(title: "Photo Library", style: UIAlertActionStyle.default) { (alert: UIAlertAction) in
             
             self.getMediaFrom(kUTTypeImage)
         }
         
-        let videoLibrary = UIAlertAction(title: "Video Library", style: UIAlertActionStyle.Default) { (alert: UIAlertAction) in
+        let videoLibrary = UIAlertAction(title: "Video Library", style: UIAlertActionStyle.default) { (alert: UIAlertAction) in
             
             self.getMediaFrom(kUTTypeMovie)
         }
@@ -75,36 +75,36 @@ class ChatViewController: JSQMessagesViewController {
         sheet.addAction(photoLibrary)
         sheet.addAction(videoLibrary)
         sheet.addAction(cancel)
-        self.presentViewController(sheet, animated: true, completion: nil)
+        self.present(sheet, animated: true, completion: nil)
     
         
     }
     
-    override func collectionView(collectionView: JSQMessagesCollectionView!, messageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageData! {
+    override func collectionView(_ collectionView: JSQMessagesCollectionView!, messageDataForItemAt indexPath: IndexPath!) -> JSQMessageData! {
         
         return messages[indexPath.item]
     }
     
-    override func collectionView(collectionView: JSQMessagesCollectionView!, messageBubbleImageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageBubbleImageDataSource! {
+    override func collectionView(_ collectionView: JSQMessagesCollectionView!, messageBubbleImageDataForItemAt indexPath: IndexPath!) -> JSQMessageBubbleImageDataSource! {
         
         let message = messages[indexPath.item]
         let bubbleFactory = JSQMessagesBubbleImageFactory()
 
         if message.senderId == self.senderId {
-            return bubbleFactory.outgoingMessagesBubbleImageWithColor(.blueColor())
+            return bubbleFactory!.outgoingMessagesBubbleImage(with: .blue)
             
         } else {
-            return bubbleFactory.incomingMessagesBubbleImageWithColor(.lightGrayColor())
+            return bubbleFactory!.incomingMessagesBubbleImage(with: .lightGray)
         }
     }
     
-    override func collectionView(collectionView: JSQMessagesCollectionView!, avatarImageDataForItemAtIndexPath indexPath: NSIndexPath!) -> JSQMessageAvatarImageDataSource! {
+    override func collectionView(_ collectionView: JSQMessagesCollectionView!, avatarImageDataForItemAt indexPath: IndexPath!) -> JSQMessageAvatarImageDataSource! {
         
         let message = messages[indexPath.item]
         return avatarDict[message.senderId]
     }
     
-    override func collectionView(collectionView: JSQMessagesCollectionView!, didTapMessageBubbleAtIndexPath indexPath: NSIndexPath!) {
+    override func collectionView(_ collectionView: JSQMessagesCollectionView!, didTapMessageBubbleAt indexPath: IndexPath!) {
         
         print("didTapMessageBubbleAtIndexPath: \(indexPath.item)")
         
@@ -114,10 +114,10 @@ class ChatViewController: JSQMessagesViewController {
             
             if let mediaItem = message.media as? JSQVideoMediaItem {
                 
-                let player = AVPlayer(URL: mediaItem.fileURL)
+                let player = AVPlayer(url: mediaItem.fileURL)
                 let playerViewController = AVPlayerViewController()
                 playerViewController.player = player
-                self.presentViewController(playerViewController, animated: true, completion: nil)
+                self.present(playerViewController, animated: true, completion: nil)
             }
             
         }
@@ -125,20 +125,20 @@ class ChatViewController: JSQMessagesViewController {
     
     // MARK: - Functions
     
-    func getMediaFrom(type: CFString) {
+    func getMediaFrom(_ type: CFString) {
         
         print(type)
         
         let mediaPicker = UIImagePickerController()
         mediaPicker.delegate = self
         mediaPicker.mediaTypes = [type as String]
-        self.presentViewController(mediaPicker, animated: true, completion: nil)
+        self.present(mediaPicker, animated: true, completion: nil)
     }
     
     
     func observeMessages() {
         
-        messageRef.observeEventType(.ChildAdded, withBlock: { snapshot in
+        messageRef.observe(.childAdded, with: { snapshot in
             
             if let dict = snapshot.value as? [String: AnyObject] {
                 
@@ -160,24 +160,24 @@ class ChatViewController: JSQMessagesViewController {
                     var photo = JSQPhotoMediaItem(image: nil)
                     let fileUrl = dict ["fileUrl"] as! String
                     
-                    if let cachedPhoto = self.photoCache.objectForKey(fileUrl) as? JSQPhotoMediaItem {
+                    if let cachedPhoto = self.photoCache.object(forKey: fileUrl as AnyObject) as? JSQPhotoMediaItem {
                         
                         photo = cachedPhoto
                         self.collectionView.reloadData()
                         
                     } else {
                         
-                        dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), {
+                        DispatchQueue.global(qos: DispatchQoS.QoSClass.userInteractive).async(execute: {
                             
-                            let url = NSURL(string: fileUrl)
-                            let data = NSData(contentsOfURL: url!)
+                            let url = URL(string: fileUrl)
+                            let data = try? Data(contentsOf: url!)
                             let convertedPhoto = UIImage(data: data!)
-                            photo.image = convertedPhoto
+                            photo?.image = convertedPhoto
                             
-                            dispatch_async(dispatch_get_main_queue(), {
+                            DispatchQueue.main.async(execute: {
                                 
                                 self.collectionView.reloadData()
-                                self.photoCache.setObject(photo, forKey: fileUrl)
+                                self.photoCache.setObject(photo!, forKey: fileUrl as AnyObject)
                             })
                         })
                     }
@@ -185,22 +185,22 @@ class ChatViewController: JSQMessagesViewController {
                     self.messages.append(JSQMessage(senderId: senderId, displayName: senderName, media: photo))
                     
                     if self.senderId == senderId {
-                        photo.appliesMediaViewMaskAsOutgoing = true
+                        photo?.appliesMediaViewMaskAsOutgoing = true
                     } else {
-                        photo.appliesMediaViewMaskAsOutgoing = false
+                        photo?.appliesMediaViewMaskAsOutgoing = false
                     }
                     
                 case "VIDEO":
                     
                     let fileUrl = dict ["fileUrl"] as! String
-                    let video = NSURL(string: fileUrl)
+                    let video = URL(string: fileUrl)
                     let convertedVideo = JSQVideoMediaItem(fileURL: video, isReadyToPlay: true)
                     self.messages.append(JSQMessage(senderId: senderId, displayName: senderName, media: convertedVideo))
                     
                     if self.senderId == senderId {
-                        convertedVideo.appliesMediaViewMaskAsOutgoing = true
+                        convertedVideo?.appliesMediaViewMaskAsOutgoing = true
                     } else {
-                        convertedVideo.appliesMediaViewMaskAsOutgoing = false
+                        convertedVideo?.appliesMediaViewMaskAsOutgoing = false
                     }
                     
                 default:
@@ -214,9 +214,9 @@ class ChatViewController: JSQMessagesViewController {
     
     
     
-    func observeUsers(id: String) {
+    func observeUsers(_ id: String) {
         
-        FIRDatabase.database().reference().child("users").child(id).observeEventType(.Value, withBlock: { snapshot in
+        FIRDatabase.database().reference().child("users").child(id).observe(.value, with: { snapshot in
             
             if let dict = snapshot.value as? [String: AnyObject] {
                 let avatarUrl = dict["profileUrl"] as! String
@@ -227,19 +227,19 @@ class ChatViewController: JSQMessagesViewController {
     
     
     
-    func setupAvatar(url: String, messageId: String) {
+    func setupAvatar(_ url: String, messageId: String) {
         
         if url != "" {
             
-            let fileUrl = NSURL(string: url)
-            let data = NSData(contentsOfURL: fileUrl!)
+            let fileUrl = URL(string: url)
+            let data = try? Data(contentsOf: fileUrl!)
             let image = UIImage(data: data!)
-            let userImg = JSQMessagesAvatarImageFactory.avatarImageWithImage(image, diameter: 30)
+            let userImg = JSQMessagesAvatarImageFactory.avatarImage(with: image, diameter: 30)
             avatarDict[messageId] = userImg
             
         } else {
             
-            avatarDict[messageId] = JSQMessagesAvatarImageFactory.avatarImageWithImage(UIImage(named: "profileImage"), diameter: 30)
+            avatarDict[messageId] = JSQMessagesAvatarImageFactory.avatarImage(with: UIImage(named: "profileImage"), diameter: 30)
         }
         
         collectionView.reloadData()
@@ -247,18 +247,18 @@ class ChatViewController: JSQMessagesViewController {
     
     
     
-    func sendMedia(photo: UIImage?, video: NSURL?) {
+    func sendMedia(_ photo: UIImage?, video: URL?) {
         print(photo)
         print(FIRStorage.storage().reference())
         
         if let photo = photo {
             
-            let filePath = "\(FIRAuth.auth()!.currentUser!)/\(NSDate.timeIntervalSinceReferenceDate())"
+            let filePath = "\(FIRAuth.auth()!.currentUser!)/\(Date.timeIntervalSinceReferenceDate)"
             print(filePath)
             let data = UIImageJPEGRepresentation(photo, 0.1)
             let metadata = FIRStorageMetadata()
             metadata.contentType = "image/jpg"
-            FIRStorage.storage().reference().child(filePath).putData(data!, metadata: metadata) { (metadata, error) in
+            FIRStorage.storage().reference().child(filePath).put(data!, metadata: metadata) { (metadata, error) in
                 if error != nil {
                     print(error?.localizedDescription)
                     return
@@ -272,12 +272,12 @@ class ChatViewController: JSQMessagesViewController {
             
         } else if let video = video {
             
-            let filePath = "\(FIRAuth.auth()!.currentUser!)/\(NSDate.timeIntervalSinceReferenceDate())"
+            let filePath = "\(FIRAuth.auth()!.currentUser!)/\(Date.timeIntervalSinceReferenceDate)"
             print(filePath)
-            let data = NSData(contentsOfURL: video)
+            let data = try? Data(contentsOf: video)
             let metadata = FIRStorageMetadata()
             metadata.contentType = "video/mp4"
-            FIRStorage.storage().reference().child(filePath).putData(data!, metadata: metadata) { (metadata, error) in
+            FIRStorage.storage().reference().child(filePath).put(data!, metadata: metadata) { (metadata, error) in
                 if error != nil {
                     print(error?.localizedDescription)
                     return
@@ -295,22 +295,22 @@ class ChatViewController: JSQMessagesViewController {
     // MARK: - Collection View Data Source/Delegate Functions
     
     
-    override func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         print("number of items in section: \(messages.count)")
         
         return messages.count
     }
     
-    override func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
+    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         
-        let cell = super.collectionView(collectionView, cellForItemAtIndexPath: indexPath) as! JSQMessagesCollectionViewCell
+        let cell = super.collectionView(collectionView, cellForItemAt: indexPath) as! JSQMessagesCollectionViewCell
         return cell
     }
     
 
     // MARK: - Actions
     
-    @IBAction func logoutTapped(sender: UIBarButtonItem) {
+    @IBAction func logoutTapped(_ sender: UIBarButtonItem) {
         
         do {
             try FIRAuth.auth()?.signOut()
@@ -319,8 +319,8 @@ class ChatViewController: JSQMessagesViewController {
         }
         
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
-        let loginVC = storyboard.instantiateViewControllerWithIdentifier("loginVC") as! LoginViewController
-        let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
+        let loginVC = storyboard.instantiateViewController(withIdentifier: "loginVC") as! LoginViewController
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
         appDelegate.window?.rootViewController = loginVC
         
     }
@@ -333,7 +333,7 @@ class ChatViewController: JSQMessagesViewController {
 
 extension ChatViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
-    func imagePickerController(picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : AnyObject]) {
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
         print("finished picking")
         print(info)
         
@@ -341,11 +341,11 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
             sendMedia(selectedPhoto, video: nil)
         }
         
-        else if let selectedVideo = info[UIImagePickerControllerMediaURL] as? NSURL {
+        else if let selectedVideo = info[UIImagePickerControllerMediaURL] as? URL {
             sendMedia(nil, video: selectedVideo)
         }
 
-        self.dismissViewControllerAnimated(true, completion: nil)
+        self.dismiss(animated: true, completion: nil)
         collectionView.reloadData()
     }
 }

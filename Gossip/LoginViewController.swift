@@ -22,19 +22,19 @@ class LoginViewController: UIViewController, GIDSignInUIDelegate, GIDSignInDeleg
         
         super.viewDidLoad()
         anonButton.layer.borderWidth = 1.0
-        anonButton.layer.borderColor = UIColor.whiteColor().CGColor
+        anonButton.layer.borderColor = UIColor.white.cgColor
         GIDSignIn.sharedInstance().clientID = "320128774959-kdqagft8n72phipqi363tetk1gjlf6ep.apps.googleusercontent.com"
         GIDSignIn.sharedInstance().uiDelegate = self
         GIDSignIn.sharedInstance().delegate = self
 
     }
     
-    override func viewDidAppear(animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         print(FIRAuth.auth()?.currentUser)
         
-        FIRAuth.auth()?.addAuthStateDidChangeListener({ (auth: FIRAuth, user: FIRUser?) in
+        FIRAuth.auth()?.addStateDidChangeListener({ (auth: FIRAuth, user: FIRUser?) in
             if user != nil {
                 print(user)
                 Helper.helper.switchToNavigationViewController()
@@ -47,14 +47,14 @@ class LoginViewController: UIViewController, GIDSignInUIDelegate, GIDSignInDeleg
 
     // MARK: - Actions
     
-    @IBAction func loginAnonymouslyTapped(sender: UIButton) {
+    @IBAction func loginAnonymouslyTapped(_ sender: UIButton) {
         
         print("login anon tapped")
         Helper.helper.loginAnonymously()
         
     }
     
-    @IBAction func googleLoginTapped(sender: UIButton) {
+    @IBAction func googleLoginTapped(_ sender: UIButton) {
         
         print("google login tapped")
         GIDSignIn.sharedInstance().signIn()
@@ -64,7 +64,7 @@ class LoginViewController: UIViewController, GIDSignInUIDelegate, GIDSignInDeleg
     
     // MARK: - Delegate Functions
     
-    func signIn(signIn: GIDSignIn!, didSignInForUser user: GIDGoogleUser!, withError error: NSError!) {
+    func sign(_ signIn: GIDSignIn!, didSignInFor user: GIDGoogleUser!, withError error: Error!) {
         
         if error != nil {
             print(error.localizedDescription)

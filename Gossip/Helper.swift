@@ -20,7 +20,7 @@ class Helper {
         
         print("login anon tapped")
         
-        FIRAuth.auth()?.signInAnonymouslyWithCompletion({ (anonymousUser: FIRUser?, error: NSError?) in
+        FIRAuth.auth()?.signInAnonymously(completion: { (anonymousUser, error) in
             
             if error == nil {
                 
@@ -39,11 +39,11 @@ class Helper {
         })
     }
     
-    func loginWithGoogle(authetication: GIDAuthentication) {
+    func loginWithGoogle(_ authetication: GIDAuthentication) {
         
-        let credential = FIRGoogleAuthProvider.credentialWithIDToken(authetication.idToken, accessToken: authetication.accessToken)
+        let credential = FIRGoogleAuthProvider.credential(withIDToken: authetication.idToken, accessToken: authetication.accessToken)
         
-        FIRAuth.auth()?.signInWithCredential(credential, completion: { (user: FIRUser?, error: NSError?) in
+        FIRAuth.auth()?.signIn(with: credential, completion: { (user, error) in
             if error != nil {
                 
                 print(error!.localizedDescription)
@@ -67,8 +67,8 @@ class Helper {
     func switchToNavigationViewController() {
         
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
-        let navigationVC = storyboard.instantiateViewControllerWithIdentifier("navigationVC") as! UINavigationController
-        let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
+        let navigationVC = storyboard.instantiateViewController(withIdentifier: "navigationVC") as! UINavigationController
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
         appDelegate.window?.rootViewController = navigationVC
     }
     
